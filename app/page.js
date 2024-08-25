@@ -1,118 +1,249 @@
 'use client'
-//import Image from "next/image";
-//import styles from "./page.module.css";
-import { Box, Button, Stack, TextField } from '@mui/material'
+// import Image from "next/image";
+// import styles from "./page.module.css";
+import { Box, Button, Stack, TextField, useMediaQuery } from '@mui/material'
 import { useState } from "react";
+import SendIcon from '@mui/icons-material/Send'
 
 export default function Home() {
-
-  // set up state (managing messages and user input)
-  const [messeges, setMessages] = useState([
+	const isSmallScreen = useMediaQuery('(max-width:800px)')
+	
+	// set up state (managing messages and user input)
+	const [messages, setMessages] = useState([
     {
-      role: "assistant",
-      content: "Hi! I'm the Rate My Professor support assistant. How can I help you today?"
+		role: "assistant",
+		content: "Hi! I'm the Rate My Professor support assistant. How can I help you today?"
     }
-  ])
-  const [message, setMessage] = useState('')
+	])
+	const [message, setMessage] = useState('')
 
-  //sendMessage function
-  const sendMessage = async ()=> {
-    setMessage('')
-    setMessages((messages)=>[
-      ...messages,
-      {role: "user", content: message},
-      {role: "assistant", content: ''}
-    ])
+	// sendMessage function
+	const sendMessage = async () => {
+		setMessages((prevMessages) => [
+			...prevMessages,
+			{ role: "user", content: message },
+			{ role: "assistant", content: '' }
+		])
 
-    const response = fetch('/api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(...messages, {role: 'user', content: message}),
-    }).then(async(res)=>{
-      const reader = res.body.getReader()
-      const decdoer = new TextDecoder()
-      let result = ''
+		setMessage('')
 
-        return reader.read().then(function processText({done, value}){ 
-          if(done){
-            return result
-          }
-          const text = decoder.decode(value || new Uint8Array(), {stream:true})
-          setMessages((messages)=>{
-            let lastMessage = messages[messages.length -1]
-            let otherMessages = messages.slice(0, messages.length -1)
-            return[
-              ...otherMessages,
-              {...lastMessage, content: lastMessage.content + text},
-            ]
-          })
-        return reader.read().then(processText)
-      })
-    })
-  }
+		const response = await fetch('/api/chat', {
+			method: 'POST',
+			headers: {
+			'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+			messages: [
+				...messages,
+				{ role: 'user', content: message }
+			]
+			}),
+		})
 
-  // UI
-  return (
-    <Box
-      width="100vw"
-      height="100vh"
-      display="flex"
-      flexDirection="column"
-      justifyContent="center"
-      alignItems="center"
-    >
-      <Stack
-        direction={'column'}
-        width="500px"
-        height="700px"
-        border="1px solid black"
-        p={2}
-        spacing={3}
-      >
-        <Stack
-          direction={'column'}
-          spacing={2}
-          flexGrow={1}
-          overflow="auto"
-          maxHeight="100%"
-        >
-          {messages.map((message, index) => (
-            <Box
-              key={index}
-              display="flex"
-              justifyContent={
-                message.role === 'assistant' ? 'flex-start' : 'flex-end'
-              }
-            >
-              <Box
-                bgcolor={
-                  message.role === 'assistant'
-                    ? 'primary.main'
-                    : 'secondary.main'
-                }
-                color="white"
-                borderRadius={16}
-                p={3}
-              >
-                {message.content}
-              </Box>
-            </Box>
-          ))}
-        </Stack>
-        <Stack direction={'row'} spacing={2}>
-          <TextField
-            label="Message"
-            fullWidth
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-          />
-          <Button variant="contained" onClick={sendMessage}>
-            Send
-          </Button>
-        </Stack>
-      </Stack>
-    </Box>
-  )
+		const reader = response.body.getReader()
+		const decoder = new TextDecoder()
+		let result = ''
+
+		const readStream = async () => {
+			const { done, value } = await reader.read()
+			if (done) {
+			return result
+			}
+			result += decoder.decode(value, { stream: true })
+
+			setMessages((prevMessages) => {
+			const lastMessage = prevMessages[prevMessages.length - 1]
+			return [
+				...prevMessages.slice(0, -1),
+				{ ...lastMessage, content: lastMessage.content + result },
+			]
+			})
+
+			return readStream()
+		}
+
+		await readStream()
+	}
+
+	// export the chat into a text file
+	const exportChat = () => {
+		// format the messages to be styled better
+		const formattedMessages = messages.map((message) => {
+			return `${message.role === 'assistant' ? 'Bot:' : 'You:'} ${message.content}`
+		}).join('\n\n')
+
+		const blob = new Blob([formattedMessages], { type: 'text/plain' })
+		const link = document.createElement('a')
+		link.href = URL.createObjectURL(blob)
+		link.download = 'rmp-chat-history.txt'
+		link.click()
+	}
+
+	const clearMessages = () => {
+		setMessages([])
+	}
+
+	// styling
+	const backgroundStyling = {
+		width: '100vw',
+		height: '100vh',
+		display: 'flex',
+		justifyContent: 'center',
+		alignItems: 'center',
+		background: 'linear-gradient(135deg, #cbf2db, #dff5e8, #cbf2db)',
+		padding: '10px'
+	}
+
+	const chatBox = {
+		width: isSmallScreen ? '90rem' : '40rem',
+		height: '90vh',
+		border: '1px solid #ddd',
+		borderRadius: '12px',
+		background: '#ffffff',
+		display: 'flex',
+		flexDirection: 'column',
+		padding: '20px',
+		boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+		overflow: 'hidden',
+		fontFamily: 'Roboto, sans-serif',
+	}
+
+	const heading = {
+		marginBottom: '20px',
+		textAlign: 'center',
+		fontSize: '24px',
+		fontWeight: 'bold',
+		color: '#5fae81',
+	}
+
+	const chatMsgs = {
+		flexGrow: 1,
+		overflowY: 'auto',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12px',
+		paddingRight: '10px',
+	}
+
+	const chatMsg = (role) => ({
+		maxWidth: '80%',
+		padding: '12px 16px',
+		borderRadius: '20px',
+		fontSize: '15px',
+		lineHeight: '1.5',
+		backgroundColor: role === 'assistant' ? '#f5f2f2' : '#5fae81',
+		color: role === 'assistant' ? '#363535' : '#fff',
+		alignSelf: role === 'assistant' ? 'flex-start' : 'flex-end',
+		boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+	})
+
+	const inputMsg = {
+		display: 'flex',
+		alignItems: 'center',
+		gap: '8px',
+		marginTop: '10px',
+	}
+
+	const inputStyle = {
+		flexGrow: 1,
+		borderRadius: '24px',
+		backgroundColor: '#f1f3f4',
+		//removing input field border
+		'& .MuiOutlinedInput-root': {
+			borderRadius: '24px',
+			'& fieldset': {
+				border: 'none',
+			},
+			'&:hover fieldset': {
+				border: 'none',
+			},
+			'&.Mui-focused fieldset': {
+				border: 'none',
+			},
+		},
+	}
+
+	const buttons = {
+		backgroundColor: '#5fae81',
+		color: '#ffffff',
+		border: 'none',
+		padding: '10px 20px',
+		borderRadius: '24px',
+		cursor: 'pointer',
+		fontSize: '14px',
+		fontWeight: 'bold',
+		'&:hover': {
+			backgroundColor: '#2b5e41',
+		},
+	}
+
+
+	// UI
+	return (
+	<>
+		<Box sx={backgroundStyling}>
+			<Box sx={chatBox}>
+				<div style={heading}>Chat with RMP Assistant!</div>
+				<Stack sx={chatMsgs}>
+					{messages.map((message, index) => (
+						<Box
+							key={index}
+							sx={chatMsg(message.role)}
+						>
+							{message.content}
+							{message.questions && message.role === 'assistant'}
+						</Box>
+					))}
+				</Stack>
+
+				<Stack direction="row" sx={inputMsg}>
+					<TextField
+						label="Message"
+						value={message}
+						onChange={(e) => setMessage(e.target.value)}
+						variant="outlined"
+						size="small"
+						sx={inputStyle}
+					/>
+					<Button
+						sx={buttons}
+						variant="contained"
+						onClick={() => sendMessage()}
+					>
+						<SendIcon />
+					</Button>
+				</Stack>
+
+				<Button
+					sx={{
+						...buttons,
+						marginTop: '15px',
+					}}
+					onClick={clearMessages}
+				>
+					Clear chat
+				</Button>
+
+				<Button 
+					sx={{
+						color: '#5fae81',
+						border: 'none',
+						padding: '10px 20px',
+						borderRadius: '24px',
+						cursor: 'pointer',
+						fontSize: '14px',
+						fontWeight: 'bold',
+						'&:hover': {
+							backgroundColor: '#f0f0f2',
+						},
+						marginTop: '10px',
+					}}
+					onClick={exportChat}
+				>
+					Export Chat
+				</Button>
+			</Box>
+		</Box>
+	</>
+	)
 }
