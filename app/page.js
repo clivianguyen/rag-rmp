@@ -3,7 +3,7 @@
 // import styles from "./page.module.css";
 import { Box, Button, Stack, TextField, useMediaQuery } from '@mui/material'
 import { useState } from "react";
-import SendIcon from '@mui/icons-material/Send'
+import {SendIcon} from '@mui/icons-material/Send'
 
 export default function Home() {
 	const isSmallScreen = useMediaQuery('(max-width:800px)')

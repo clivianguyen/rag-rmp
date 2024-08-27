@@ -1,6 +1,6 @@
 import {NextResponse} from "next/server"
-import {Pinecone} from "@pinecone-database/pinecone"
-import OpenAI from 'openai'
+import {Pinecone} from "@pinecone-database/Pinecone"
+import OpenAI from 'OpenAI'
 // import { routeModule } from "next/dist/build/templates/app-page";
 
 //define the system prompt (ai generated using claude.ai)
